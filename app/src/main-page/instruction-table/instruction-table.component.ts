@@ -39,6 +39,8 @@ export class InstructionTableComponent implements OnInit {
         this.parts = this.tableService.produceRTrapInstruction(draft);
       } else if (this.instructionType === 'ITrap') {
         this.parts = this.tableService.produceITrapInstruction(draft);        
+      } else if (this.instructionType === 'Special') {
+        this.parts = this.tableService.produceSpecialInstruction(draft);
       }
     });
   }

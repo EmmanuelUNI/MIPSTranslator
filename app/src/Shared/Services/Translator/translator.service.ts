@@ -7,6 +7,7 @@ export interface Instruction {
 }
 
 export const instructionMap: { [key: string]: Instruction } = {
+  // R-Type Instructions
   "add": { opcode: "000000", funct: "100000" },
   "sub": { opcode: "000000", funct: "100010" },
   "and": { opcode: "000000", funct: "100100" },
@@ -39,9 +40,33 @@ export const instructionMap: { [key: string]: Instruction } = {
   "subu": { opcode: "000000", funct: "100011" },
   "xor": { opcode: "000000", funct: "100110" },
   "syscall": { opcode: "000000", funct: "001100" },
-  "break":   { opcode: "000000", funct: "001101" },
+  "break": { opcode: "000000", funct: "001101" },
+  "abs": { opcode: "000000", funct: "000000" }, // Pseudo-instruction
+  "not": { opcode: "000000", funct: "100111" }, // Pseudo-instruction (nor)
+  "neg": { opcode: "000000", funct: "100010" }, // Pseudo-instruction (sub)
+  "negu": { opcode: "000000", funct: "100011" }, // Pseudo-instruction (subu)
+  "rol": { opcode: "000000", funct: "000000" }, // Pseudo-instruction (sll)
+  "ror": { opcode: "000000", funct: "000010" }, // Pseudo-instruction (srl)
+  "rem": { opcode: "000000", funct: "011010" }, // Same as div
+  "remu": { opcode: "000000", funct: "011011" }, // Same as divu
+  "mul": { opcode: "000000", funct: "011000" }, // Same as mult
+  "mulo": { opcode: "000000", funct: "011000" }, // Same as mult
+  "mulou": { opcode: "000000", funct: "011001" }, // Same as multu
+  "seq": { opcode: "000000", funct: "101010" }, // Pseudo-instruction (slt)
+  "sge": { opcode: "000000", funct: "101010" }, // Pseudo-instruction (slt)
+  "sgeu": { opcode: "000000", funct: "101011" }, // Pseudo-instruction (sltu)
+  "sgt": { opcode: "000000", funct: "101010" }, // Pseudo-instruction (slt)
+  "sgtu": { opcode: "000000", funct: "101011" }, // Pseudo-instruction (sltu)
+  "sle": { opcode: "000000", funct: "101010" }, // Pseudo-instruction (slt)
+  "sleu": { opcode: "000000", funct: "101011" }, // Pseudo-instruction (sltu)
+  "sne": { opcode: "000000", funct: "101010" }, // Pseudo-instruction (slt)
+  "move": { opcode: "000000", funct: "100001" }, // Pseudo-instruction (addu)
+
+  // I-Type Instructions
   "bltz": { opcode: "000001", rt: "00000" },
   "bgez": { opcode: "000001", rt: "00001" },
+  "bgezal": { opcode: "000001", rt: "10001" },
+  "bltzal": { opcode: "000001", rt: "10000" },
   "addi": { opcode: "001000" },
   "addiu": { opcode: "001001" },
   "andi": { opcode: "001100" },
@@ -59,11 +84,50 @@ export const instructionMap: { [key: string]: Instruction } = {
   "bne": { opcode: "000101" },
   "bgtz": { opcode: "000111" },
   "blez": { opcode: "000110" },
+  "lui": { opcode: "001111" },
+  "slti": { opcode: "001010" },
+  "sltiu": { opcode: "001011" },
+  "la": { opcode: "001111" }, // Pseudo-instruction (lui + ori)
+  "ld": { opcode: "110111" }, // 64-bit extension
+  "lwcz": { opcode: "110001" }, // Coprocessor
+  "lwl": { opcode: "100010" },
+  "lwr": { opcode: "100110" },
+  "ulh": { opcode: "100001" }, // Pseudo-instruction
+  "ulhu": { opcode: "100101" }, // Pseudo-instruction
+  "ulw": { opcode: "100011" }, // Pseudo-instruction
+  "sd": { opcode: "111111" }, // 64-bit extension
+  "swcz": { opcode: "111001" }, // Coprocessor
+  "swl": { opcode: "101010" },
+  "swr": { opcode: "101110" },
+  "ush": { opcode: "101001" }, // Pseudo-instruction
+  "usw": { opcode: "101011" }, // Pseudo-instruction
+  "li": { opcode: "001111" }, // Pseudo-instruction (lui + ori)
+  "li.d": { opcode: "110101" }, // Floating point
+  "li.s": { opcode: "110100" }, // Floating point
+  "beqz": { opcode: "000100" }, // Pseudo-instruction (beq with $zero)
+  "bnez": { opcode: "000101" }, // Pseudo-instruction (bne with $zero)
+  "bge": { opcode: "000001" }, // Pseudo-instruction
+  "bgeu": { opcode: "000001" }, // Pseudo-instruction
+  "bgt": { opcode: "000111" }, // Pseudo-instruction
+  "bgtu": { opcode: "000111" }, // Pseudo-instruction
+  "ble": { opcode: "000110" }, // Pseudo-instruction
+  "bleu": { opcode: "000110" }, // Pseudo-instruction
+  "blt": { opcode: "000001" }, // Pseudo-instruction (bltz)
+  "bltu": { opcode: "000001" }, // Pseudo-instruction
+  "bczt": { opcode: "010000" }, // Coprocessor
+  "bczf": { opcode: "010000" }, // Coprocessor
+  "auipc": { opcode: "001011" }, // Upper immediate PC-relative
+
+  // J-Type Instructions
   "j": { opcode: "000010" },
   "jal": { opcode: "000011" },
-  "lui":  { opcode: "001111" },
-  "slti": { opcode: "001010" },
-  "sltiu":{ opcode: "001011" }
+
+  // Special Instructions
+  "rfe": { opcode: "010000", funct: "010000" }, // COP0 instruction
+  "nop": { opcode: "000000", funct: "000000" }, // No operation
+  "mfcz": { opcode: "010000" }, // COP0
+  "mtcz": { opcode: "010000" }, // COP0
+  "mfc1.d": { opcode: "010001" } // COP1
 };
 
 export const registerMap: { [key: string]: string } = {
@@ -80,10 +144,10 @@ export const registerMap: { [key: string]: string } = {
 @Injectable({
   providedIn: 'root',
 })
-
 export class TranslatorService {
   instructionMap = instructionMap;
   registerMap = registerMap;
+
   getOpcode(name: string): string {
     return instructionMap[name]?.opcode || 'unknown';
   }
@@ -131,32 +195,53 @@ export class TranslatorService {
 
     let binaryInstruction = opcode;
 
-    if (["add", "sub", "slt", "and", "or", "nor", "addu", "sllv", "srlv", "subu", "srav", "xor"].includes(parts[0])) {
+    // Handle R-Type instructions
+    if (["add", "sub", "slt", "and", "or", "nor", "addu", "sllv", "srlv", "subu", "srav", "xor", 
+         "sge", "sgeu", "sgt", "sgtu", "sle", "sleu", "sne", "seq", "rol", "ror", "mul", "mulo", 
+         "mulou", "rem", "remu"].includes(parts[0])) {
       const rd = this.convertRegisterToBinary(parts[1]);
       const rs = this.convertRegisterToBinary(parts[2]);
       const rt = this.convertRegisterToBinary(parts[3]);
       if (!rd || !rs || !rt) return `Missing ${!rd ? ' rd' : ''}${!rs ? ' rs' : ''}${!rt ? ' rt' : ''}`;
       binaryInstruction += rs + rt + rd + "00000" + this.getFunctCode(parts[0]);
-    } else if (["div", "divu", "mult", "multu"].includes(parts[0])) {
+    } 
+    // Handle R-Type with 2 operands
+    else if (["div", "divu", "mult", "multu"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts[1]);
       const rt = this.convertRegisterToBinary(parts[2]);
       if (!rs || !rt) return "Invalid Registers";
       binaryInstruction += rs + rt + "00000" + "00000" + this.getFunctCode(parts[0]);
-    } else if (["mfhi", "mflo"].includes(parts[0])) {
+    } 
+    // Handle R-Type with 1 operand
+    else if (["mfhi", "mflo", "not", "neg", "negu", "abs"].includes(parts[0])) {
       const rd = this.convertRegisterToBinary(parts[1]);
       if (!rd) return "Invalid Registers";
       binaryInstruction += "00000" + "00000" + rd + "00000" + this.getFunctCode(parts[0]);
-    } else if (["mthi", "mtlo"].includes(parts[0])) {
+    } 
+    // Handle R-Type with 1 operand (rs)
+    else if (["mthi", "mtlo"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts[1]);
       if (!rs) return "Invalid Registers";
       binaryInstruction += rs + "00000" + "00000" + "00000" + this.getFunctCode(parts[0]);
-    } else if (["lw", "sw", "lb", "lbu", "lh", "lhu", "sb", "sh"].includes(parts[0])) {
+    } 
+    // Handle move pseudo-instruction
+    else if (parts[0] === "move") {
+      const rd = this.convertRegisterToBinary(parts[1]);
+      const rs = this.convertRegisterToBinary(parts[2]);
+      if (!rd || !rs) return "Invalid Registers";
+      binaryInstruction += rs + "00000" + rd + "00000" + this.getFunctCode(parts[0]);
+    }
+    // Handle load/store instructions
+    else if (["lw", "sw", "lb", "lbu", "lh", "lhu", "sb", "sh", "lwl", "lwr", "swl", "swr", "ld", "sd"].includes(parts[0])) {
       const rt = this.convertRegisterToBinary(parts[1]);
-      const rs = this.convertRegisterToBinary(parts[3].split(',')[0]);
-      const immediate = parseInt(parts[2]);
+      const offsetParts = parts[2].split('(');
+      const immediate = parseInt(offsetParts[0]);
+      const rs = this.convertRegisterToBinary(offsetParts[1].replace(')', ''));
       if (!rt || !rs || isNaN(immediate)) return "Invalid Syntax";
       binaryInstruction += rs + rt + (immediate >>> 0).toString(2).padStart(16, '0');
-    } else if (["addi", "addiu", "andi", "ori", "xori"].includes(parts[0])) {
+    }
+    // Handle I-Type arithmetic instructions
+    else if (["addi", "addiu", "andi", "ori", "xori", "slti", "sltiu"].includes(parts[0])) {
       const rt = this.convertRegisterToBinary(parts[1]);
       const rs = this.convertRegisterToBinary(parts[2]);
       const immediate = parseInt(parts[3]);
@@ -164,36 +249,59 @@ export class TranslatorService {
         return `Missing${!rt ? ' rt' : ''}${isNaN(immediate) ? ' immediate (hex)' : ''}${!rs ? ' rs' : ''}`;
       }
       binaryInstruction += rs + rt + (immediate >>> 0).toString(2).padStart(16, '0');
-    } else if (["sll", "srl", "sra"].includes(parts[0])) {
+    } 
+    // Handle shift instructions
+    else if (["sll", "srl", "sra"].includes(parts[0])) {
       const rd = this.convertRegisterToBinary(parts[1]);
       const rt = this.convertRegisterToBinary(parts[2]);
       const shamt = parseInt(parts[3]);
       if (!rd || !rt || isNaN(shamt)) return "Invalid Syntax";
       const shamtBin = shamt.toString(2).padStart(5, '0');
       binaryInstruction += "00000" + rt + rd + shamtBin + this.getFunctCode(parts[0]);
-    } else if (["beq", "bne", "bgtz", "blez"].includes(parts[0])) {
+    } 
+    // Handle branch instructions
+    else if (["beq", "bne", "beqz", "bnez", "bgtz", "blez"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts[1]);
-      const rt = ["beq", "bne"].includes(parts[0]) ? this.convertRegisterToBinary(parts[2]) : "00000";
-      const label = parts[parts.length - 1];
-      if (!rs || (["beq", "bne"].includes(parts[0]) && !rt)) return "Invalid Registers";
+      let rt = "00000";
+      let label = parts[2];
+      
+      if (parts[0] === "beqz") {
+        rt = this.convertRegisterToBinary("zero");
+        label = parts[2];
+      } else if (parts[0] === "bnez") {
+        rt = this.convertRegisterToBinary("zero");
+        label = parts[2];
+      } else if (["beq", "bne"].includes(parts[0])) {
+        rt = this.convertRegisterToBinary(parts[2]);
+        label = parts[3];
+      }
+      
       const offset = parseInt(label);
+      if (!rs || (["beq", "bne"].includes(parts[0]) && !rt)) return "Invalid Registers";
       if (isNaN(offset)) return "Invalid Syntax";
       const offsetBinary = (offset >>> 0).toString(2).padStart(16, '0');
       binaryInstruction += rs + rt + offsetBinary;
-    } else if (["j", "jal"].includes(parts[0])) {
+    } 
+    // Handle jump instructions
+    else if (["j", "jal"].includes(parts[0])) {
       const address = parseInt(parts[1]);
       if (isNaN(address)) return "Invalid Syntax";
       binaryInstruction += (address >>> 0).toString(2).padStart(26, '0');
-    } else if (["jalr"].includes(parts[0])) {
+    } 
+    // Handle jalr/jr
+    else if (["jalr"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts.length === 2 ? parts[1] : parts[2]);
       const rd = parts.length === 3 ? this.convertRegisterToBinary(parts[1]) : "11111";
       if (!rs || !rd) return "Invalid Registers";
       binaryInstruction += rs + "00000" + rd + "00000" + this.getFunctCode(parts[0]);
-    } else if (["jr"].includes(parts[0])) {
+    } 
+    else if (["jr"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts[1]);
       if (!rs) return "Missing rs";
       binaryInstruction += rs + "00000" + "00000" + "00000" + this.getFunctCode(parts[0]);
-    } else if (["teq", "tge", "tgeu", "tlt", "tltu", "tne"].includes(parts[0])) {
+    } 
+    // Handle trap instructions
+    else if (["teq", "tge", "tgeu", "tlt", "tltu", "tne"].includes(parts[0])) {
       const rt = this.convertRegisterToBinary(parts[1]);
       const rs = this.convertRegisterToBinary(parts[2]);
       let code = parseInt(parts[3]);
@@ -201,34 +309,62 @@ export class TranslatorService {
       if (isNaN(code) || code < 0 || code > 1023) return "Invalid Code";
       const codeBinary = code.toString(2).padStart(10, '0');
       binaryInstruction += rs + rt + codeBinary + this.getFunctCode(parts[0]);
-    } else if (["syscall", "break"].includes(parts[0])) {
+    } 
+    // Handle syscall/break
+    else if (["syscall", "break", "nop"].includes(parts[0])) {
       binaryInstruction = opcode + "00000000000000000000" + this.getFunctCode(parts[0]);
-    } else if (["bltz", "bgez"].includes(parts[0])) {
+    } 
+    // Handle bltz/bgez/bgezal/bltzal
+    else if (["bltz", "bgez", "bgezal", "bltzal"].includes(parts[0])) {
       const rs = this.convertRegisterToBinary(parts[1]);
       const offset = parseInt(parts[2]);
       if (!rs || isNaN(offset)) return "Invalid Syntax";
       binaryInstruction += rs + instructionMap[parts[0]].rt + (offset >>> 0).toString(2).padStart(16, '0');
-    } else if (["slti", "sltiu"].includes(parts[0])) {
-      const rt = this.convertRegisterToBinary(parts[1]);
-      const rs = this.convertRegisterToBinary(parts[2]);
-      const immediate = parseInt(parts[3]);    
-      
-      if (!rt || !rs || isNaN(immediate)) return "Invalid Syntax";
-      
-      // Estructura I-Type: opcode + rs + rt + immediate
-      binaryInstruction += rs + rt + (immediate >>> 0).toString(2).padStart(16, '0');
-    } else if (["lui"].includes(parts[0])) {
+    } 
+    // Handle lui
+    else if (["lui"].includes(parts[0])) {
       const rt = this.convertRegisterToBinary(parts[1]);
       const immediate = parseInt(parts[2]);
       if (!rt || isNaN(immediate)) return "Invalid Syntax";
       binaryInstruction += "00000" + rt + (immediate >>> 0).toString(2).padStart(16, '0');
-    } else if (["tgei", "tgeiu", "tlti", "tltiu", "teqi", "tnei"].includes(parts[0])) {
-      const rs = this.convertRegisterToBinary(parts[1]);
+    } 
+    // Handle la pseudo-instruction (lui + ori)
+    else if (["la"].includes(parts[0])) {
+      const rt = this.convertRegisterToBinary(parts[1]);
+      const address = parseInt(parts[2]);
+      if (!rt || isNaN(address)) return "Invalid Syntax";
+      // This would actually need to be split into two instructions
+      return "la requires lui + ori (not implemented)";
+    }
+    // Handle li pseudo-instruction (lui + ori)
+    else if (["li"].includes(parts[0])) {
+      const rt = this.convertRegisterToBinary(parts[1]);
       const immediate = parseInt(parts[2]);
-      if (!rs || isNaN(immediate)) return "Invalid Syntax";
-      const immediateBinary = (immediate >>> 0).toString(2).padStart(16, '0');
-      binaryInstruction += rs + this.getOpcode(parts[0]) + immediateBinary;
-    } else {
+      if (!rt || isNaN(immediate)) return "Invalid Syntax";
+      // This would actually need to be split into two instructions
+      return "li requires lui + ori (not implemented)";
+    }
+    // Handle floating point load immediate
+    else if (["li.s", "li.d"].includes(parts[0])) {
+      const rt = this.convertRegisterToBinary(parts[1]);
+      const immediate = parseFloat(parts[2]);
+      if (!rt || isNaN(immediate)) return "Invalid Syntax";
+      // Floating point immediate loading is complex
+      return "Floating point immediate loading not implemented";
+    }
+    // Handle coprocessor instructions
+    else if (["mfcz", "mtcz"].includes(parts[0])) {
+      const rt = this.convertRegisterToBinary(parts[1]);
+      const cop = parts[2];
+      if (!rt || !cop) return "Invalid Syntax";
+      // Coprocessor instructions have complex encoding
+      return "Coprocessor instructions not fully implemented";
+    }
+    // Handle rfe
+    else if (["rfe"].includes(parts[0])) {
+      binaryInstruction = opcode + "00000000000000000000" + this.getFunctCode(parts[0]);
+    }
+    else {
       return "Unsupported Instruction";
     }
 
@@ -256,9 +392,18 @@ export class TranslatorService {
         mipsInstruction = `bltz ${rs} ${offset}`;
       } else if (rt === "00001") {
         mipsInstruction = `bgez ${rs} ${offset}`;
-      } 
-    } else if (["add", "sub", "slt", "and", "or", "jr", "jalr", "mfhi", "mflo", "mthi", "mtlo", "tge", "tgeu", "tlt", "tltu", "teq", "tne", "addu", 
-      "subu", "xor", "nor", "sll", "srl", "mult", "div", "sra", "srav", "srlv", "divu", "multu", "sllv"].includes(opcodeMIPS)) {
+      } else if (rt === "10000") {
+        mipsInstruction = `bltzal ${rs} ${offset}`;
+      } else if (rt === "10001") {
+        mipsInstruction = `bgezal ${rs} ${offset}`;
+      }
+    } 
+    // Handle R-Type instructions
+    else if (["add", "sub", "slt", "and", "or", "jr", "jalr", "mfhi", "mflo", "mthi", "mtlo", 
+             "tge", "tgeu", "tlt", "tltu", "teq", "tne", "addu", "subu", "xor", "nor", "sll", 
+             "srl", "mult", "div", "sra", "srav", "srlv", "divu", "multu", "sllv", "rol", "ror",
+             "mul", "mulo", "mulou", "rem", "remu", "seq", "sge", "sgeu", "sgt", "sgtu", "sle",
+             "sleu", "sne", "not", "neg", "negu", "abs"].includes(opcodeMIPS)) {
       const func = binaryInstruction.slice(26, 32);
       const funcMIPS = this.convertFunctToName(func);
       if (!funcMIPS) return "Unknown Instruction (function)";
@@ -267,62 +412,64 @@ export class TranslatorService {
       const rt = this.convertRegisterToName(binaryInstruction.slice(11, 16));
       const rd = this.convertRegisterToName(binaryInstruction.slice(16, 21));
 
-      if (["add", "sub", "slt", "and", "or", "addu", "subu", "xor", "nor", "srlv", "sllv", "srav"].includes(funcMIPS)) {
+      if (["add", "sub", "slt", "and", "or", "addu", "subu", "xor", "nor", "srlv", "sllv", "srav",
+           "rol", "ror", "seq", "sge", "sgeu", "sgt", "sgtu", "sle", "sleu", "sne"].includes(funcMIPS)) {
         mipsInstruction = funcMIPS + " " + rd + " " + rs + " " + rt;
-      } else if (funcMIPS === "jr") {
+      } 
+      else if (funcMIPS === "jr") {
         mipsInstruction = "jr " + rs;
-      } else if (funcMIPS === "jalr") {
+      } 
+      else if (funcMIPS === "jalr") {
         mipsInstruction = "jalr " + rs + " " + rd;
-      } else if (["sll", "srl", "sra"].includes(funcMIPS)) {
+      } 
+      else if (["sll", "srl", "sra"].includes(funcMIPS)) {
         const shamt = this.binaryToHex(binaryInstruction.slice(21, 26));
         mipsInstruction = funcMIPS + " " + rd + " " + rt + " " + shamt;
-      } else if (["mult", "div", "multu", "divu"].includes(funcMIPS)) {
+      } 
+      else if (["mult", "div", "multu", "divu", "mul", "mulo", "mulou", "rem", "remu"].includes(funcMIPS)) {
         mipsInstruction = funcMIPS + " " + rs + " " + rt;
-      } else if (["mfhi", "mflo"].includes(funcMIPS)) {
+      } 
+      else if (["mfhi", "mflo", "not", "neg", "negu", "abs"].includes(funcMIPS)) {
         mipsInstruction = funcMIPS + " " + rd;
-      } else if (["mthi", "mtlo"].includes(funcMIPS)) {
+      } 
+      else if (["mthi", "mtlo"].includes(funcMIPS)) {
         mipsInstruction = funcMIPS + " " + rs;
-      } else if (["tge", "tgeu", "tlt", "tltu", "teq", "tne"].includes(funcMIPS)) {
+      } 
+      else if (["tge", "tgeu", "tlt", "tltu", "teq", "tne"].includes(funcMIPS)) {
         const code = this.binaryToHex(binaryInstruction.slice(16, 26));
         mipsInstruction = funcMIPS + " " + rt + " " + rs + " " + code;
-      } else if (funcMIPS === "syscall" || funcMIPS === "break") {
+      } 
+      else if (funcMIPS === "syscall" || funcMIPS === "break" || funcMIPS === "nop") {
         mipsInstruction = funcMIPS; 
       }
-    } else if (["tgei", "tgeiu", "tlti", "tltiu", "teqi", "tnei"].includes(opcodeMIPS)) {
-      const rs = this.convertRegisterToName(binaryInstruction.slice(6, 11));
-      const rt = binaryInstruction.slice(11, 16);
-      const rtMap: { [key: string]: string } = {
-        "01000": "tgei", "01001": "tgeiu", "01010": "tlti",
-        "01011": "tltiu", "01100": "teqi", "01110": "tnei"
-      };
-      const instructionName = rtMap[rt];
-      const immediate = this.binaryToHex(binaryInstruction.slice(16, 32));
-      if (!instructionName || !rs || !immediate) return "Invalid Syntax";
-      mipsInstruction = instructionName + " " + rs + " " + immediate;
-    } else if (["lw", "sw", "lb", "lbu", "lh", "lhu", "sb", "sh"].includes(opcodeMIPS)) {
+      else if (funcMIPS === "move") {
+        mipsInstruction = "move " + rd + " " + rs;
+      }
+    } 
+    // Handle load/store instructions
+    else if (["lw", "sw", "lb", "lbu", "lh", "lhu", "sb", "sh", "lwl", "lwr", "swl", "swr", "ld", "sd"].includes(opcodeMIPS)) {
       const rs = this.convertRegisterToName(binaryInstruction.slice(6, 11));
       const rt = this.convertRegisterToName(binaryInstruction.slice(11, 16));
       const offset = this.binaryToHex(binaryInstruction.slice(16, 32));
       if (!rt || !rs || !offset) return "Invalid Syntax";
-      mipsInstruction += rt + " " + offset + " " + rs;
-    } else if (["addi", "addiu", "andi", "ori", "xori"].includes(opcodeMIPS)) {
-      const rt = this.convertRegisterToName(binaryInstruction.slice(6, 11));
-      const rs = this.convertRegisterToName(binaryInstruction.slice(11, 16));
-      const immediate = this.binaryToHex(binaryInstruction.slice(16, 32));
-      if (!rt || !rs || !immediate) return "Invalid Syntax";
-      mipsInstruction += rs + " " + rt + " " + immediate;
-    } else if (["slti", "sltiu"].includes(opcodeMIPS)) {
-      const rs = this.convertRegisterToName(binaryInstruction.slice(6, 11));
+      mipsInstruction += rt + " " + offset + "(" + rs + ")";
+    } 
+    // Handle I-Type arithmetic instructions
+    else if (["addi", "addiu", "andi", "ori", "xori", "slti", "sltiu"].includes(opcodeMIPS)) {
       const rt = this.convertRegisterToName(binaryInstruction.slice(11, 16));
+      const rs = this.convertRegisterToName(binaryInstruction.slice(6, 11));
       const immediate = this.binaryToHex(binaryInstruction.slice(16, 32));
-      
       if (!rt || !rs || !immediate) return "Invalid Syntax";
-      mipsInstruction = `${opcodeMIPS} ${rt} ${rs} ${immediate}`;
-    } else if (opcodeMIPS === "lui") {
+      mipsInstruction += rt + " " + rs + " " + immediate;
+    } 
+    // Handle lui
+    else if (opcodeMIPS === "lui") {
       const rt = this.convertRegisterToName(binaryInstruction.slice(11, 16));
       const immediate = this.binaryToHex(binaryInstruction.slice(16, 32));
       mipsInstruction = `lui ${rt} ${immediate}`;
-    } else if (["beq", "bne", "bgtz", "blez"].includes(opcodeMIPS)) {
+    } 
+    // Handle branch instructions
+    else if (["beq", "bne", "bgtz", "blez"].includes(opcodeMIPS)) {
       const rs = this.convertRegisterToName(binaryInstruction.slice(6, 11));
       const rt = ["beq", "bne"].includes(opcodeMIPS) ? this.convertRegisterToName(binaryInstruction.slice(11, 16)) : "00000";
       const offset = this.binaryToHex(binaryInstruction.slice(16, 32));
@@ -332,11 +479,34 @@ export class TranslatorService {
       } else {
         mipsInstruction += rs + " " + rt + " " + offset;
       }
-    } else if (["j", "jal"].includes(opcodeMIPS)) {
+    } 
+    // Handle jump instructions
+    else if (["j", "jal"].includes(opcodeMIPS)) {
       const address = this.binaryToHex(binaryInstruction.slice(6, 32));
       if (!address) return "Invalid Syntax";
       mipsInstruction += address;
-    } else {
+    } 
+    // Handle coprocessor instructions
+    else if (["mfcz", "mtcz"].includes(opcodeMIPS)) {
+      const rt = this.convertRegisterToName(binaryInstruction.slice(16, 21));
+      const cop = "0"; // Simplified
+      mipsInstruction = `${opcodeMIPS} ${rt} ${cop}`;
+    }
+    // Handle floating point
+    else if (["li.s", "li.d"].includes(opcodeMIPS)) {
+      const rt = this.convertRegisterToName(binaryInstruction.slice(11, 16));
+      const immediate = "0.0"; // Simplified
+      mipsInstruction = `${opcodeMIPS} ${rt} ${immediate}`;
+    }
+    // Handle rfe
+    else if (opcodeMIPS === "rfe") {
+      mipsInstruction = "rfe";
+    }
+    // Handle la pseudo-instruction (not directly encodable)
+    else if (opcodeMIPS === "la") {
+      mipsInstruction = "la (not directly decodable)";
+    }
+    else {
       return "Unsupported Instruction";
     }
 

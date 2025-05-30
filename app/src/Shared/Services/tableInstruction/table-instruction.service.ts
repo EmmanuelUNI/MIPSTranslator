@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { TranslatorService } from '../Translator/translator.service';
-import { text } from 'stream/consumers';
 import { FormInputManagerService } from '../FormInputManager/form-input-manager.service';
 
 @Injectable({
@@ -11,13 +10,13 @@ export class TableInstructionService {
   converter = inject(TranslatorService);
   private selectedLineTextSubject = new BehaviorSubject<string>('');
   isHexToMips = inject(FormInputManagerService).isHexToMips;
-  // Esto es el observable al que otros componentes pueden suscribirse
   selectedLineText$ = this.selectedLineTextSubject.asObservable();
   selectedLineText = '';
-  // Método para actualizar el valor
+
   updateSelectedLineText(newText: string): void {
     this.selectedLineTextSubject.next(newText);
   }
+
   textContent = '';
 
   constructor() {}
@@ -61,13 +60,11 @@ export class TableInstructionService {
   }
 
   explainInstruction() {
-    
     this.selectedLineText$.subscribe((text) => {
       if(!this.isHexToMips.value){
         text = this.converter.translateMIPStoHex(text);
       }
       this.selectedLineText = text;
-    
     });
     const instruction = this.selectedLineText.trim();
     return this.generateInstructionTable(instruction.trim());
@@ -90,14 +87,16 @@ export class TableInstructionService {
   produceIInstruction(instruction: string) {
     const binaryInstruction: string = this.converter.hexToBinary(instruction);
     const opcode = binaryInstruction.slice(0, 6);
+    
     if (opcode === '000001') {
       return {
         opcode: opcode,
         rs: binaryInstruction.slice(6, 11),
-        rt: binaryInstruction.slice(11, 16), // "00000" o "00001"
+        rt: binaryInstruction.slice(11, 16),
         immediate: binaryInstruction.slice(16, 32)
       };
     }
+    
     return {
       opcode: opcode,
       rs: binaryInstruction.slice(6, 11),
@@ -115,22 +114,19 @@ export class TableInstructionService {
       address: binaryInstruction.slice(6, 32),
     };
   }
-  
 
   produceRTrapInstruction(instruction: string) {
     const binaryInstruction: string = this.converter.hexToBinary(this.selectedLineText);
 
-    const result = {
+    return {
       opcode: binaryInstruction.slice(0, 6),
       rs: binaryInstruction.slice(6, 11),
       rt: binaryInstruction.slice(11, 16),
-      code: binaryInstruction.slice(16, 26), // Code de 10 bits
-      funct: binaryInstruction.slice(26, 32), // Funct de 6 bits
+      code: binaryInstruction.slice(16, 26),
+      funct: binaryInstruction.slice(26, 32),
     };
-
-    console.log("R-Trap Instruction", result); // Verifica los valores aquí
-    return result;
   }
+
   produceITrapInstruction(instruction: string) {
     const binaryInstruction: string = this.converter.hexToBinary(instruction);
 
@@ -142,16 +138,61 @@ export class TableInstructionService {
       "01100": "teqi",
       "01110": "tnei"
     };
-  // Obtenemos el binario de rt y lo mapeamos
-  const rtBinary = binaryInstruction.slice(11, 16); // Obtenemos el valor binario de rt
-  const rtName = rtMap[rtBinary]; // Usamos el mapa para obtener el nombre correspondiente
+
+    const rtBinary = binaryInstruction.slice(11, 16);
+    const rtName = rtMap[rtBinary];
 
     return {
       opcode: binaryInstruction.slice(0, 6),
       rs: binaryInstruction.slice(6, 11),
-      rtBinary: rtBinary,  // Devolvemos el valor binario de rt
-      rtName: rtName,      // Devolvemos el nombre mapeado
+      rtBinary: rtBinary,
+      rtName: rtName,
       immediate: binaryInstruction.slice(16, 32),
+    };
+  }
+
+  produceSpecialInstruction(instruction: string) {
+    const binaryInstruction: string = this.converter.hexToBinary(instruction);
+    const opcode = binaryInstruction.slice(0, 6);
+    
+    // Handle coprocessor instructions (COP0, COP1, etc.)
+    if (opcode === '010000') { // COP0
+      return {
+        opcode: opcode,
+        rs: binaryInstruction.slice(6, 11),
+        rt: binaryInstruction.slice(11, 16),
+        rd: binaryInstruction.slice(16, 21),
+        funct: binaryInstruction.slice(26, 32),
+        coprocessor: '0'
+      };
+    }
+    else if (opcode === '010001') { // COP1 (floating point)
+      return {
+        opcode: opcode,
+        fmt: binaryInstruction.slice(6, 11),
+        ft: binaryInstruction.slice(11, 16),
+        fs: binaryInstruction.slice(16, 21),
+        fd: binaryInstruction.slice(21, 26),
+        funct: binaryInstruction.slice(26, 32),
+        coprocessor: '1'
+      };
+    }
+    else if (opcode === '010010') { // COP2
+      return {
+        opcode: opcode,
+        coprocessor: '2',
+        rs: binaryInstruction.slice(6, 11),
+        rt: binaryInstruction.slice(11, 16),
+        rd: binaryInstruction.slice(16, 21),
+        funct: binaryInstruction.slice(26, 32)
+      };
+    }
+    
+    // Handle other special instructions
+    return {
+      opcode: opcode,
+      binary: binaryInstruction,
+      instruction: 'Special instruction'
     };
   }
 
@@ -161,185 +202,310 @@ export class TableInstructionService {
     );
     const opCode: string = binaryInstruction.slice(0, 6);
 
-    switch (opCode) {
-      case '000000':
-        return { type: 'R', data: this.produceRInstruction(instruction) };
-      case '001000': // addi
-      case '100011': // lw
-      case '101011': // sw
-      case '000100': // beq
-      case '000101': // bne
-      case '000110': // blez
-      case '000111': // bgtz
-      case '001001': // addiu
-      case '001100': // andi
-      case '001101': // ori
-      case '001110': // xori
-      case '100000': // lb
-      case '100100': // lbu
-      case '100001': // lh
-      case '100101': // lhu
-      case '101000': // sb
-      case '101001': // sh
-      case '000001': // bltz / bgez (rt = 00000 ⇒ bltz; rt = 00001 ⇒ bgez)
-      case '001111': // lui
-      case '001010': // slti
-      case '001011': // sltiu
-        return { type: 'I', data: this.produceIInstruction(instruction) };
-      case '000010':
-      case '000011':
-        return { type: 'J', data: this.produceJInstruction(instruction) };
-      default:
-        return { type: 'unknown', data: 'Unknown instruction', opCode: opCode };
+    // R-Type instructions
+    if (opCode === '000000') {
+      const funct = binaryInstruction.slice(26, 32);
+      // Check for trap instructions
+      if (['110000', '110001', '110010', '110011', '110100', '110110'].includes(funct)) {
+        return { type: 'R-Trap', data: this.produceRTrapInstruction(instruction) };
+      }
+      return { type: 'R', data: this.produceRInstruction(instruction) };
     }
+    
+    // I-Type instructions
+    const iTypeOpcodes = [
+      '001000', '001001', '001100', '001101', '001110',
+      '100011', '101011', '100000', '100100', '100001',
+      '100101', '101000', '101001', '000100', '000101',
+      '000110', '000111', '001111', '001010', '001011',
+      '000001', '100010', '100110', '101010', '101110',
+      '110111', '111111'
+    ];
+    
+    if (iTypeOpcodes.includes(opCode)) {
+      // Special case for trap immediate instructions
+      if (opCode === '000001' && ['01000', '01001', '01010', '01011', '01100', '01110'].includes(binaryInstruction.slice(11, 16))) {
+        return { type: 'I-Trap', data: this.produceITrapInstruction(instruction) };
+      }
+      return { type: 'I', data: this.produceIInstruction(instruction) };
+    }
+    
+    // J-Type instructions
+    if (['000010', '000011'].includes(opCode)) {
+      return { type: 'J', data: this.produceJInstruction(instruction) };
+    }
+    
+    // Special instructions (coprocessor, floating point, etc.)
+    if (['010000', '010001', '010010', '010011'].includes(opCode)) {
+      return { type: 'Special', data: this.produceSpecialInstruction(instruction) };
+    }
+
+    return { type: 'unknown', data: 'Unknown instruction', opCode: opCode };
   }
+
   decodeInstruction(instruction: string) {
     let explanation = '';
     let details: any = {};
 
-    // Assume `instruction` is a string like "add $t1, $t2, $t3"
     const parts = instruction.split(/\s+/);
-    const operation = parts[0]; // e.g., "add"
-    console.log('operation', operation);
+    const operation = parts[0].toLowerCase();
+    
     switch (operation) {
-      case 'add':
-      case 'sub':
-      case 'and':
-      case 'or':
-      case 'slt':
-        // R-type instructions
+      // R-Type instructions
+      case 'add': case 'sub': case 'and': case 'or': case 'xor': case 'nor':
+      case 'slt': case 'sltu': case 'addu': case 'subu': case 'sll': case 'srl':
+      case 'sra': case 'sllv': case 'srlv': case 'srav': case 'div': case 'divu':
+      case 'mult': case 'multu': case 'mfhi': case 'mflo': case 'mthi': case 'mtlo':
+      case 'jr': case 'jalr': case 'syscall': case 'break': case 'teq': case 'tge':
+      case 'tgeu': case 'tlt': case 'tltu': case 'tne': case 'rol': case 'ror':
+      case 'mul': case 'mulo': case 'mulou': case 'rem': case 'remu':
         details = {
           operation: operation,
-          rs: parts[2], // e.g., "$t2"
-          rt: parts[3], // e.g., "$t3"
-          rd: parts[1], // e.g., "$t1"
-          shamt: '0',
+          rs: parts.length > 2 ? parts[2] : undefined,
+          rt: parts.length > 3 ? parts[3] : undefined,
+          rd: parts.length > 1 ? parts[1] : undefined,
+          shamt: operation.match(/sll|srl|sra/) ? parts[3] : '0',
           funct: this.converter.getFunctCode(operation),
         };
-        explanation = `This is an R-type instruction where ${details.rd} gets the result of ${details.operation} operation between ${details.rs} and ${details.rt}.`;
+        explanation = this.getRTypeExplanation(operation, details);
         break;
-      // Add cases for I-type and J-type instructions
-      case 'lw':
-      case 'lb':
-      case 'lbu':
-      case 'lh':
-      case 'lhu':
-        details = {
-          operation: operation,
-          rt: parts[1], // e.g., "$t1"
-          offset: parts[2], // e.g., "100($t2)"
-          rs: parts[2].split('(')[1].replace(')', ''), // e.g., "$t2"
-        };
-        explanation = `This is an I-type instruction where ${details.rt} gets the value from memory at the address ${details.offset} offset from ${details.rs}.`;
-        break;
-      case 'sw':
-      case 'sb':
-      case 'sh':
-        details = {
-          operation: operation,
-          rt: parts[1], // e.g., "$t1"
-          offset: parts[2], // e.g., "100($t2)"
-          rs: parts[2].split('(')[1].replace(')', ''), // e.g., "$t2"
-        };
-        explanation = `This is an I-type instruction where the value in ${details.rt} is stored in memory at the address ${details.offset} offset from ${details.rs}.`;
-        break;
-      case 'addi':
-        details = {
-          operation: operation,
-          rt: parts[1], // e.g., "$t1"
-          rs: parts[2], // e.g., "$t2"
-          immediate: parts[3], // e.g., "100"
-        };
-        explanation = `This is an I-type instruction where ${details.rt} gets the result of adding the value in ${details.rs} and the immediate value ${details.immediate}.`;
-        break;
-      case 'beq':
-        details = {
-          operation: operation,
-          rs: parts[1], // e.g., "$t1"
-          rt: parts[2], // e.g., "$t2"
-          offset: parts[3], // e.g., "100"
-        };
-        explanation = `This is an I-type instruction where the program jumps to the target address if the values in ${details.rs} and ${details.rt} are equal.`;
-        break;
-      case 'bne':
-        details = {
-          operation: operation,
-          rs: parts[1], // e.g., "$t1"
-          rt: parts[2], // e.g., "$t2"
-          offset: parts[3], // e.g., "100"
-        };
-        explanation = `This is an I-type instruction where the program jumps to the target address if the values in ${details.rs} and ${details.rt} are not equal.`;
-        break;
-        case 'addiu':
-          details = {
-            operation: operation,
-            rt: parts[1], // e.g., "$t1"
-            rs: parts[2], // e.g., "$t2"
-            immediate: parts[3], // e.g., "100"
-          };
-          explanation = `This is an I-type instruction where ${details.rt} get the result of adding the value in ${details.rs} and the immediate value ${details.immediate}, but without generating an overflow.`;
-          break;
-  
-        case 'andi':
-          details = {
-            operation: operation,
-            rt: parts[1], // e.g., "$t1"
-            rs: parts[2], // e.g., "$t2"
-            immediate: parts[3], // e.g., "100"
-          };
-          explanation = `This is an I-type instruction where ${details.rt} gets the result of a bitwise AND between the value in ${details.rs} and the immediate value ${details.immediate}.`;
-          break;
-  
-        case 'ori':
-          details = {
-            operation: operation,
-            rt: parts[1], // e.g., "$t1"
-            rs: parts[2], // e.g., "$t2"
-            immediate: parts[3], // e.g., "100"
-          };
-          explanation = `This is an I-type instruction where ${details.rt} gets the result of a bitwise OR between the value in ${details.rs} and the immediate value ${details.immediate}.`;
-          break;
-  
-        case 'xori':
-          details = {
-            operation: operation,
-            rt: parts[1], // e.g., "$t1"
-            rs: parts[2], // e.g., "$t2"
-            immediate: parts[3], // e.g., "100"
-          };
-          explanation = `This is an I-type instruction where ${details.rt} gets the result of a bitwise XOR between the value in ${details.rs} and the immediate value ${details.immediate}.`;
-          break;
 
-        case 'bltz':
-        case 'bgez':
-          details = {
-            operation: operation,
-            rs: parts[1],       // Ej: "$s0"
-            offset: parts[2],   // Ej: "etiqueta"
-          };
-          explanation = `Branch if ${details.rs} is ${operation === 'bltz' ? 'less than zero' : 'greater or equal to zero'}`;
-          break;
-        
-        case 'lui':
-          details = {
-            operation: operation,
-            rt: parts[1],       // Ej: "$t0"
-            immediate: parts[2],// Ej: "0x1000"
-          };
-          explanation = `Load upper immediate: ${details.rt} = ${details.immediate} << 16`;
-          break;
-        
-        case 'slti':
-        case 'sltiu':
-          details = {
-            operation: operation,
-            rt: parts[1],       // Ej: "$t0"
-            rs: parts[2],       // Ej: "$s1"
-            immediate: parts[3],// Ej: "100"
-          };
-          explanation = `Set ${details.rt} to 1 if ${details.rs} < ${details.immediate} (${operation.includes('u') ? 'unsigned' : 'signed'})`;
-          break;
+      // I-Type instructions
+      case 'addi': case 'addiu': case 'andi': case 'ori': case 'xori': 
+      case 'slti': case 'sltiu':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          rs: parts[2],
+          immediate: parts[3],
+        };
+        explanation = this.getITypeArithmeticExplanation(operation, details);
+        break;
+
+      case 'lw': case 'sw': case 'lb': case 'lbu': case 'lh': case 'lhu':
+      case 'sb': case 'sh': case 'lwl': case 'lwr': case 'swl': case 'swr':
+      case 'ld': case 'sd':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          offset: parts[2].split('(')[0],
+          rs: parts[2].split('(')[1].replace(')', ''),
+        };
+        explanation = this.getMemoryExplanation(operation, details);
+        break;
+
+      case 'beq': case 'bne': case 'blez': case 'bgtz': case 'bltz': 
+      case 'bgez': case 'bltzal': case 'bgezal':
+        details = {
+          operation: operation,
+          rs: parts[1],
+          rt: operation === 'beq' || operation === 'bne' ? parts[2] : undefined,
+          offset: operation === 'beq' || operation === 'bne' ? parts[3] : parts[2],
+        };
+        explanation = this.getBranchExplanation(operation, details);
+        break;
+
+      case 'lui':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          immediate: parts[2],
+        };
+        explanation = `Load upper immediate: ${details.rt} = ${details.immediate} << 16`;
+        break;
+
+      case 'la':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          address: parts[2],
+        };
+        explanation = `Load address: ${details.rt} = address of ${details.address}`;
+        break;
+
+      case 'li':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          immediate: parts[2],
+        };
+        explanation = `Load immediate: ${details.rt} = ${details.immediate}`;
+        break;
+
+      case 'move':
+        details = {
+          operation: operation,
+          rd: parts[1],
+          rs: parts[2],
+        };
+        explanation = `Move: ${details.rd} = ${details.rs}`;
+        break;
+
+      case 'not':
+        details = {
+          operation: operation,
+          rd: parts[1],
+          rs: parts[2],
+        };
+        explanation = `Bitwise NOT: ${details.rd} = ~${details.rs}`;
+        break;
+
+      case 'neg': case 'negu':
+        details = {
+          operation: operation,
+          rd: parts[1],
+          rs: parts[2],
+        };
+        explanation = `Negate${operation === 'negu' ? ' unsigned' : ''}: ${details.rd} = -${details.rs}`;
+        break;
+
+      case 'j': case 'jal':
+        details = {
+          operation: operation,
+          address: parts[1],
+        };
+        explanation = operation === 'j' 
+          ? `Jump to address ${details.address}` 
+          : `Jump and link: store return address in $ra and jump to ${details.address}`;
+        break;
+
+      case 'nop':
+        explanation = `No operation: does nothing`;
+        break;
+
+      case 'rfe':
+        explanation = `Return from exception: restores status after exception`;
+        break;
+
+      // Special instructions (coprocessor, floating point)
+      case 'mfc0': case 'mtc0': case 'mfc1': case 'mtc1': case 'mfc2': case 'mtc2':
+        details = {
+          operation: operation,
+          rt: parts[1],
+          rd: parts[2],
+          coprocessor: operation.slice(-1)
+        };
+        explanation = `${operation}: Move ${details.rt} ${operation.startsWith('mf') ? 'from' : 'to'} coprocessor ${details.coprocessor} register ${details.rd}`;
+        break;
+
+      case 'cvt.s.w': case 'cvt.d.w': case 'cvt.w.s': case 'cvt.w.d':
+        details = {
+          operation: operation,
+          fd: parts[1],
+          fs: parts[2]
+        };
+        explanation = `Convert ${details.fs} from ${operation.split('.')[1]} to ${operation.split('.')[2]} format, store in ${details.fd}`;
+        break;
+
+      case 'add.s': case 'sub.s': case 'mul.s': case 'div.s':
+      case 'add.d': case 'sub.d': case 'mul.d': case 'div.d':
+        details = {
+          operation: operation,
+          fd: parts[1],
+          fs: parts[2],
+          ft: parts[3],
+          precision: operation.split('.')[1] === 's' ? 'single' : 'double'
+        };
+        explanation = `Floating point ${operation.split('.')[0]} (${details.precision} precision): ${details.fd} = ${details.fs} ${operation.split('.')[0]} ${details.ft}`;
+        break;
+
+      default:
+        explanation = `Unknown instruction: ${operation}`;
     }
     return explanation;
+  }
+
+  private getRTypeExplanation(op: string, details: any): string {
+    const explanations: {[key: string]: string} = {
+      'add': `${details.rd} = ${details.rs} + ${details.rt} (with overflow check)`,
+      'addu': `${details.rd} = ${details.rs} + ${details.rt} (no overflow check)`,
+      'sub': `${details.rd} = ${details.rs} - ${details.rt} (with overflow check)`,
+      'subu': `${details.rd} = ${details.rs} - ${details.rt} (no overflow check)`,
+      'and': `${details.rd} = ${details.rs} & ${details.rt} (bitwise AND)`,
+      'or': `${details.rd} = ${details.rs} | ${details.rt} (bitwise OR)`,
+      'xor': `${details.rd} = ${details.rs} ^ ${details.rt} (bitwise XOR)`,
+      'nor': `${details.rd} = ~(${details.rs} | ${details.rt}) (bitwise NOR)`,
+      'slt': `${details.rd} = (${details.rs} < ${details.rt}) ? 1 : 0 (signed comparison)`,
+      'sltu': `${details.rd} = (${details.rs} < ${details.rt}) ? 1 : 0 (unsigned comparison)`,
+      'sll': `${details.rd} = ${details.rt} << ${details.shamt} (shift left logical)`,
+      'srl': `${details.rd} = ${details.rt} >> ${details.shamt} (shift right logical)`,
+      'sra': `${details.rd} = ${details.rt} >> ${details.shamt} (shift right arithmetic)`,
+      'sllv': `${details.rd} = ${details.rt} << ${details.rs} (shift left logical variable)`,
+      'srlv': `${details.rd} = ${details.rt} >> ${details.rs} (shift right logical variable)`,
+      'srav': `${details.rd} = ${details.rt} >> ${details.rs} (shift right arithmetic variable)`,
+      'div': `Divide ${details.rs} by ${details.rt} (signed), store quotient in LO and remainder in HI`,
+      'divu': `Divide ${details.rs} by ${details.rt} (unsigned), store quotient in LO and remainder in HI`,
+      'mult': `Multiply ${details.rs} by ${details.rt} (signed), store 64-bit result in HI:LO`,
+      'multu': `Multiply ${details.rs} by ${details.rt} (unsigned), store 64-bit result in HI:LO`,
+      'mfhi': `${details.rd} = HI (move from HI register)`,
+      'mflo': `${details.rd} = LO (move from LO register)`,
+      'mthi': `HI = ${details.rs} (move to HI register)`,
+      'mtlo': `LO = ${details.rs} (move to LO register)`,
+      'jr': `Jump to address in ${details.rs}`,
+      'jalr': `Jump to address in ${details.rs} and store return address in ${details.rd || '$ra'}`,
+      'syscall': `System call (invoke operating system service)`,
+      'break': `Breakpoint (generate exception)`,
+      'teq': `Trap if ${details.rs} == ${details.rt}`,
+      'tge': `Trap if ${details.rs} >= ${details.rt} (signed)`,
+      'tgeu': `Trap if ${details.rs} >= ${details.rt} (unsigned)`,
+      'tlt': `Trap if ${details.rs} < ${details.rt} (signed)`,
+      'tltu': `Trap if ${details.rs} < ${details.rt} (unsigned)`,
+      'tne': `Trap if ${details.rs} != ${details.rt}`,
+      'rol': `${details.rd} = ${details.rt} rotated left by ${details.rs} bits`,
+      'ror': `${details.rd} = ${details.rt} rotated right by ${details.rs} bits`,
+      'mul': `${details.rd} = ${details.rs} * ${details.rt} (signed, low 32 bits)`,
+      'mulo': `${details.rd} = ${details.rs} * ${details.rt} (signed, with overflow check)`,
+      'mulou': `${details.rd} = ${details.rs} * ${details.rt} (unsigned, with overflow check)`,
+      'rem': `${details.rd} = ${details.rs} % ${details.rt} (signed remainder)`,
+      'remu': `${details.rd} = ${details.rs} % ${details.rt} (unsigned remainder)`,
+    };
+
+    return explanations[op] || `R-type instruction: ${op} operation`;
+  }
+
+  private getITypeArithmeticExplanation(op: string, details: any): string {
+    const explanations: {[key: string]: string} = {
+      'addi': `${details.rt} = ${details.rs} + ${details.immediate} (signed with overflow check)`,
+      'addiu': `${details.rt} = ${details.rs} + ${details.immediate} (signed without overflow check)`,
+      'andi': `${details.rt} = ${details.rs} & ${details.immediate} (bitwise AND)`,
+      'ori': `${details.rt} = ${details.rs} | ${details.immediate} (bitwise OR)`,
+      'xori': `${details.rt} = ${details.rs} ^ ${details.immediate} (bitwise XOR)`,
+      'slti': `${details.rt} = (${details.rs} < ${details.immediate}) ? 1 : 0 (signed comparison)`,
+      'sltiu': `${details.rt} = (${details.rs} < ${details.immediate}) ? 1 : 0 (unsigned comparison)`,
+    };
+
+    return explanations[op] || `I-type arithmetic instruction: ${op} operation`;
+  }
+
+  private getMemoryExplanation(op: string, details: any): string {
+    const loadStore = op.startsWith('l') ? 'Load' : 'Store';
+    const sizeMap: {[key: string]: string} = {
+      'b': 'byte',
+      'h': 'halfword',
+      'w': 'word',
+      'd': 'doubleword',
+      'l': 'left word',
+      'r': 'right word'
+    };
+    
+    const size = sizeMap[op.charAt(1)] || 'word';
+    const signed = op.endsWith('u') ? ' unsigned' : '';
+    
+    return `${loadStore} ${size}${signed}: ${op} ${details.rt}, ${details.offset}(${details.rs})`;
+  }
+
+  private getBranchExplanation(op: string, details: any): string {
+    const explanations: {[key: string]: string} = {
+      'beq': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} == ${details.rt}`,
+      'bne': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} != ${details.rt}`,
+      'blez': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} <= 0`,
+      'bgtz': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} > 0`,
+      'bltz': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} < 0`,
+      'bgez': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} >= 0`,
+      'bltzal': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} < 0 and store return address in $ra`,
+      'bgezal': `Branch to PC + 4 + (${details.offset} << 2) if ${details.rs} >= 0 and store return address in $ra`,
+    };
+
+    return explanations[op] || `Branch instruction: ${op} operation`;
   }
 }

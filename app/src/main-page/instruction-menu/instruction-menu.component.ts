@@ -27,14 +27,21 @@ export class InstructionMenuComponent {
       "add", "sub", "and", "or", "jalr", "jr", "slt", "mfhi", "mflo", 
       "mthi", "mtlo", "teq", "tge", "tgeu", "tlt", "tltu", "tne", "addu", 
       "div", "divu", "mult", "multu", "nor", "sll", "sllv", "sra", "srav", 
-      "srl", "srlv", "subu", "xor", "syscall", "break"
+      "srl", "srlv", "subu", "xor", "syscall", "break", "abs", "not", "neg", 
+      "negu", "rol", "ror", "rem", "remu", "mul", "mulo", "mulou", "seq", 
+      "sge", "sgeu", "sgt", "sgtu", "sle", "sleu", "sne", "move", "rfe"
     ],
     'I-Type': [
       "addi", "addiu", "andi", "ori", "xori", "lw", "sw", "lb", "lbu", 
       "lh", "lhu", "sb", "sh", "beq", "bne", "bgtz", "blez", "bltz", 
-      "bgez", "lui", "slti", "sltiu"
+      "bgez", "lui", "slti", "sltiu", "la", "ld", "lwcz", "lwl", "lwr", 
+      "ulh", "ulhu", "ulw", "sd", "swcz", "swl", "swr", "ush", "usw", 
+      "li", "li.d", "li.s", "slli", "srli", "srai", "beqz", "bge", "bgeu", 
+      "bgezal", "bgt", "bgtu", "ble", "bleu", "blt", "bltu", "bltzal", 
+      "bnez", "bczt", "bczf", "auipc"
     ],
     'J-Type': ['jal', 'j'],
+    'Pseudo-Instructions': ['nop']
   };
 
   // Método para filtrar las instrucciones según el texto ingresado
@@ -79,6 +86,36 @@ export class InstructionMenuComponent {
       formattedInstruction = instruction;
     } else if (['bltz', 'bgez'].includes(instruction)) {
       formattedInstruction = `${instruction} $t1 8`;
+    } else if (['la', 'li', 'move'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 $t2`;
+    } else if (['abs', 'neg', 'negu', 'not'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 $t2`;
+    } else if (['mul', 'mulo', 'mulou', 'rem', 'remu'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 $t2 $t3`;
+    } else if (['rol', 'ror'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 $t2 1`;
+    } else if (['seq', 'sge', 'sgeu', 'sgt', 'sgtu', 'sle', 'sleu', 'sne'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 $t2 $t3`;
+    } else if (['li.d', 'li.s'].includes(instruction)) {
+      formattedInstruction = `${instruction} $f1 1.0`;
+    } else if (['bczt', 'bczf'].includes(instruction)) {
+      formattedInstruction = `${instruction} 8`;
+    } else if (['beqz', 'bnez'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 8`;
+    } else if (['bgezal', 'bltzal'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 8`;
+    } else if (['lwcz', 'swcz'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 0x0001 $t2`;
+    } else if (['lwl', 'lwr', 'swl', 'swr'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 0x0001 $t2`;
+    } else if (['ulh', 'ulhu', 'ulw', 'ush', 'usw'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 0x0001 $t2`;
+    } else if (['ld', 'sd'].includes(instruction)) {
+      formattedInstruction = `${instruction} $t1 0x0001 $t2`;
+    } else if (['rfe'].includes(instruction)) {
+      formattedInstruction = instruction;
+    } else if (['nop'].includes(instruction)) {
+      formattedInstruction = instruction;
     } else {
       formattedInstruction = instruction;
     }
